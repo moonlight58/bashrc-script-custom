@@ -314,6 +314,23 @@ git-push() {
         echo -e "\e[33m Récupération de la branche actuelle: $branch\e[0m"
     fi
 
+    # Vérification s'il y a déjà un commit
+    if ! git rev-parse HEAD >/dev/null 2>&1; then
+        echo -e "\e[31mAucun commit n'a encore été créé. Création du premier commit...\e[0m"
+        git add .
+        if ! git commit -m "$commit_message"; then
+            echo -e "\e[31mErreur lors de la création du premier commit.\e[0m"
+            return 1
+        fi
+        echo "Push vers la branche: $branch"
+        if ! git push origin "$branch"; then
+            echo -e "\e[31mErreur lors du push.\e[0m"
+            return 1
+        fi
+        echo -e "\e[32m=== Premier commit et push effectués avec succès ! ===\e[0m"
+        return 0
+    fi
+
     echo -e "\e[32m=== Synchronisation avec le repo distant ===\e[0m"
 
     # Fetch des dernières modifications
@@ -414,26 +431,75 @@ main() {
     
     # Add configurations
     echo -e "${BLUE}📝 Adding configurations to ~/.bashrc...${NC}"
-    
+
     # Add header comment
     echo "" >> ~/.bashrc
     echo "# === Added by Bashrc Configurator $(date) ===" >> ~/.bashrc
-    
+
     for key in "${CONFIG_KEYS[@]}"; do
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+            # Vérification si le bloc existe déjà
             case $key in
-                "basic_aliases") generate_basic_aliases >> ~/.bashrc ;;
-                "git_aliases") generate_git_aliases >> ~/.bashrc ;;
-                "system_aliases") generate_system_aliases >> ~/.bashrc ;;
-                "npm_aliases") generate_npm_aliases >> ~/.bashrc ;;
-                "vencord_function") generate_vencord_function >> ~/.bashrc ;;
-                "git_push_function") generate_git_push_function >> ~/.bashrc ;;
-                "starship_init") generate_starship_init >> ~/.bashrc ;;
+                "basic_aliases")
+                    if ! grep -q "# Custom Basic Aliases" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_basic_aliases >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "git_aliases")
+                    if ! grep -q "# Custom Git Aliases" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_git_aliases >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "system_aliases")
+                    if ! grep -q "# System Management Aliases" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_system_aliases >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "npm_aliases")
+                    if ! grep -q "# NPM Aliases" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_npm_aliases >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "vencord_function")
+                    if ! grep -q "# Fonction update/install discord - vencord" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_vencord_function >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "git_push_function")
+                    if ! grep -q "# Fonction git-push" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_git_push_function >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
+                "starship_init")
+                    if ! grep -q "# Starship prompt initialization" ~/.bashrc; then
+                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                        generate_starship_init >> ~/.bashrc
+                    else
+                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                    fi
+                    ;;
             esac
         fi
     done
-    
+
     echo "# === End of Bashrc Configurator additions ===" >> ~/.bashrc
     echo "" >> ~/.bashrc
     
