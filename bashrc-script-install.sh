@@ -41,7 +41,7 @@ draw_interface() {
     for key in "${CONFIG_KEYS[@]}"; do
         local prefix="  "
         local color="${NC}"
-        local checkbox="◌"
+        local checkbox="◯"
         
         # Highlight current selection
         if [ $i -eq $CURRENT_SELECTION ]; then
@@ -59,108 +59,100 @@ draw_interface() {
     done
     
     echo
-    echo -e "${GRAY}(Use arrow keys to move, <space> to select, <a> to toggle all, <i> to invert selection)${NC}"
+    echo -e "${GRAY}(Use arrow keys to move, <s> to select, <a> to toggle all, <i> to invert selection, <e> to confirm)${NC}"
 }
 
 # Function to handle user input
 handle_input() {
     local key
+    
+    # Read a single character
     read -rsn1 key
     
-    case $key in
-        A) # Up arrow (actually part of escape sequence)
-            read -rsn2 -t 0.1 key
-            if [[ $key == "[A" ]]; then
+    # Handle escape sequences (arrow keys)
+    if [[ $key == $'\e' ]]; then
+        read -rsn2 -t 0.1 key
+        case $key in
+            "[A") # Up arrow
                 ((CURRENT_SELECTION--))
                 if [ $CURRENT_SELECTION -lt 0 ]; then
                     CURRENT_SELECTION=$((${#CONFIG_KEYS[@]} - 1))
                 fi
-            fi
-            ;;
-        B) # Down arrow
-            read -rsn2 -t 0.1 key
-            if [[ $key == "[B" ]]; then
+                ;;
+            "[B") # Down arrow
                 ((CURRENT_SELECTION++))
                 if [ $CURRENT_SELECTION -ge ${#CONFIG_KEYS[@]} ]; then
                     CURRENT_SELECTION=0
                 fi
-            fi
-            ;;
-        $'\e') # Escape sequence
-            read -rsn2 -t 0.1 key
-            case $key in
-                "[A") # Up arrow
-                    ((CURRENT_SELECTION--))
-                    if [ $CURRENT_SELECTION -lt 0 ]; then
-                        CURRENT_SELECTION=$((${#CONFIG_KEYS[@]} - 1))
-                    fi
-                    ;;
-                "[B") # Down arrow
-                    ((CURRENT_SELECTION++))
-                    if [ $CURRENT_SELECTION -ge ${#CONFIG_KEYS[@]} ]; then
-                        CURRENT_SELECTION=0
-                    fi
-                    ;;
-            esac
-            ;;
-        ' ') # Space bar - toggle selection
-            local current_key=${CONFIG_KEYS[$CURRENT_SELECTION]}
-            if [[ ${SELECTED_OPTIONS[$current_key]} == "1" ]]; then
-                SELECTED_OPTIONS[$current_key]=""
-            else
-                SELECTED_OPTIONS[$current_key]="1"
-            fi
-            ;;
-        'a'|'A') # Toggle all
-            local all_selected=1
-            for key in "${CONFIG_KEYS[@]}"; do
-                if [[ ${SELECTED_OPTIONS[$key]} != "1" ]]; then
-                    all_selected=0
-                    break
-                fi
-            done
-            
-            if [ $all_selected -eq 1 ]; then
-                # Deselect all
-                for key in "${CONFIG_KEYS[@]}"; do
-                    SELECTED_OPTIONS[$key]=""
-                done
-            else
-                # Select all
-                for key in "${CONFIG_KEYS[@]}"; do
-                    SELECTED_OPTIONS[$key]="1"
-                done
-            fi
-            ;;
-        'i'|'I') # Invert selection
-            for key in "${CONFIG_KEYS[@]}"; do
-                if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-                    SELECTED_OPTIONS[$key]=""
+                ;;
+        esac
+    else
+        case $key in
+            's'|'S') # S key - toggle selection
+                local current_key=${CONFIG_KEYS[$CURRENT_SELECTION]}
+                if [[ ${SELECTED_OPTIONS[$current_key]} == "1" ]]; then
+                    SELECTED_OPTIONS[$current_key]=""
                 else
-                    SELECTED_OPTIONS[$key]="1"
+                    SELECTED_OPTIONS[$current_key]="1"
                 fi
-            done
-            ;;
-        $'\n'|'') # Enter key
-            return 1 # Signal to exit
-            ;;
-        'q'|'Q'|$'\x03') # q or Ctrl+C
-            echo
-            echo -e "${YELLOW}Configuration cancelled.${NC}"
-            exit 0
-            ;;
-    esac
+                ;;
+            'a'|'A') # Toggle all
+                local all_selected=1
+                for key in "${CONFIG_KEYS[@]}"; do
+                    if [[ ${SELECTED_OPTIONS[$key]} != "1" ]]; then
+                        all_selected=0
+                        break
+                    fi
+                done
+                
+                if [ $all_selected -eq 1 ]; then
+                    # Deselect all
+                    for key in "${CONFIG_KEYS[@]}"; do
+                        SELECTED_OPTIONS[$key]=""
+                    done
+                else
+                    # Select all
+                    for key in "${CONFIG_KEYS[@]}"; do
+                        SELECTED_OPTIONS[$key]="1"
+                    done
+                fi
+                ;;
+            'i'|'I') # Invert selection
+                for key in "${CONFIG_KEYS[@]}"; do
+                    if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
+                        SELECTED_OPTIONS[$key]=""
+                    else
+                        SELECTED_OPTIONS[$key]="1"
+                    fi
+                done
+                ;;
+            'e'|'E') # E key - confirm selection
+                return 1 # Signal to exit
+                ;;
+            'q'|'Q'|$'\x03') # q or Ctrl+C
+                echo
+                echo -e "${YELLOW}Configuration cancelled.${NC}"
+                exit 0
+                ;;
+        esac
+    fi
     return 0
 }
 
 # Function to show the selection interface
 show_selection_interface() {
+    # Configure terminal for raw input
+    stty -echo -icanon min 1 time 0
+    
     while true; do
         draw_interface
         if ! handle_input; then
             break
         fi
     done
+    
+    # Restore terminal settings
+    stty echo icanon
     
     # Check if any options were selected
     local has_selections=0
@@ -181,8 +173,9 @@ show_selection_interface() {
 # Function to backup .bashrc
 backup_bashrc() {
     if [ -f ~/.bashrc ]; then
-        cp ~/.bashrc ~/.bashrc.backup.$(date +%Y%m%d_%H%M%S)
-        echo -e "${GREEN}✓${NC} Backup created: ~/.bashrc.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_name="$HOME/.bashrc.backup.$(date +%Y%m%d_%H%M%S)"
+        cp ~/.bashrc "$backup_name"
+        echo -e "${GREEN}✓${NC} Backup created: $backup_name"
     fi
 }
 
@@ -430,7 +423,7 @@ main() {
     backup_bashrc
     
     # Add configurations
-    echo -e "${BLUE}📝 Adding configurations to ~/.bashrc...${NC}"
+    echo -e "${BLUE}🔧 Adding configurations to ~/.bashrc...${NC}"
 
     # Add header comment
     echo "" >> ~/.bashrc
@@ -438,14 +431,14 @@ main() {
 
     for key in "${CONFIG_KEYS[@]}"; do
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            # Vérification si le bloc existe déjà
+            # Vérification si le bloc existe déjà 
             case $key in
                 "basic_aliases")
                     if ! grep -q "# Custom Basic Aliases" ~/.bashrc; then
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_basic_aliases >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "git_aliases")
@@ -453,7 +446,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_git_aliases >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "system_aliases")
@@ -461,7 +454,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_system_aliases >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "npm_aliases")
@@ -469,7 +462,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_npm_aliases >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "vencord_function")
@@ -477,7 +470,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_vencord_function >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "git_push_function")
@@ -485,7 +478,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_git_push_function >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
                 "starship_init")
@@ -493,7 +486,7 @@ main() {
                         echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                         generate_starship_init >> ~/.bashrc
                     else
-                        echo -e "  ${YELLOW}⚠${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
                     fi
                     ;;
             esac
@@ -508,11 +501,14 @@ main() {
     echo
     echo -e "${YELLOW}Get started with the following commands:${NC}"
     echo
-    echo -e " ${GRAY}$${NC} ${CYAN}source ~/.bashrc${NC}"
-    echo -e " ${GRAY}$${NC} ${CYAN}# Or restart your terminal${NC}"
+    echo -e " ${GRAY}\$${NC} ${CYAN}source ~/.bashrc${NC}"
+    echo -e " ${GRAY}\$${NC} ${CYAN}# Or restart your terminal${NC}"
     echo
     echo -e "${GRAY}You can always restore from backup if needed.${NC}"
 }
+
+# Trap to restore terminal settings on exit
+trap 'stty echo icanon' EXIT
 
 # Check if we're in a terminal that supports the required features
 if [ ! -t 0 ]; then
