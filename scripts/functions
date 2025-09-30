@@ -146,3 +146,16 @@ git-push() {
 
     echo -e "\e[32m=== Opération terminée avec succès ! ===\e[0m"
 }
+
+
+# Fonction find files if unsure about name
+find-unsure() {
+    if [ $# -ne 1 ]; then
+        echo -e "\e[33mUsage:\e[0m \e[34mfind-unsure\e[0m \e[33m<name file>\e[0m"
+        return 1
+    fi
+
+    local file_name="$1"
+
+    command find ~ -iname "*$file_name*"
+}

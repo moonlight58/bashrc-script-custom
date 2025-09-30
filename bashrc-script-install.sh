@@ -215,12 +215,14 @@ main() {
 
     for key in "${CONFIG_KEYS[@]}"; do
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            file="$CONFIG_DIR/$key.bashrc"
+            file="$CONFIG_DIR/$key"
             desc="# ${CONFIG_OPTIONS[$key]}"
             # Vérification si le bloc existe déjà (on cherche la description)
             if ! grep -qF "$desc" ~/.bashrc; then
                 echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
                 cat "$file" >> ~/.bashrc
+                echo "
+                " >> ~/.bashrc
             else
                 echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
             fi
