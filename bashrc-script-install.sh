@@ -185,6 +185,27 @@ backup_bashrc() {
 
 # Main function
 main() {
+    echo
+    # === Ajout du prompt pour les profils git ===
+    read -rp "Voulez-vous ajouter un ou plusieurs profils git (user.name/user.email) ? (o/n) : " add_git_profiles
+    if [[ "$add_git_profiles" =~ ^[oOyY]$ ]]; then
+        GIT_IDENTITIES_FILE="$HOME/.git_identities"
+        > "$GIT_IDENTITIES_FILE"
+        while true; do
+            read -rp "Nom du profil (user.name) : " git_name
+            read -rp "Email du profil (user.email) : " git_email
+            echo "[user]" >> "$GIT_IDENTITIES_FILE"
+            echo "    name = $git_name" >> "$GIT_IDENTITIES_FILE"
+            echo "    email = $git_email" >> "$GIT_IDENTITIES_FILE"
+            read -rp "Ajouter un autre profil ? (o/n) : " another
+            [[ "$another" =~ ^[oOyY]$ ]] || break
+        done
+        echo -e "${GREEN}Profils git enregistrés dans $GIT_IDENTITIES_FILE et alias ajoutés à ~/.bashrc${NC}"
+    fi
+
+    echo
+    echo -e "${GREEN}🎉 Successfully created git user(s) !${NC}"
+ 
     # Show the Vue CLI-style interface
     show_selection_interface
 

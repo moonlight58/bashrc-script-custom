@@ -147,7 +147,6 @@ git-push() {
     echo -e "\e[32m=== Opération terminée avec succès ! ===\e[0m"
 }
 
-
 # Fonction find files if unsure about name
 find-unsure() {
     if [ $# -ne 1 ]; then
@@ -158,4 +157,56 @@ find-unsure() {
     local file_name="$1"
 
     command find ~ -iname "*$file_name*"
+}
+
+git-clone() {
+    # Vérification des arguments
+    if [ $# -ne 1 ]; then
+        echo -e "\e[33mUsage: git-clone <url du repo>\e[0m"
+        return 1
+    fi
+
+    local repo_url="$1"
+
+    # Input select for user name and email from the file .git_identities
+    if [ ! -f "$HOME/.git_identities" ]; then
+        echo -e "\e[31mLe fichier ~/.git_identities n'existe pas. Veuillez d'abord créer des profils git.\e[0m"
+        return 1
+    fi
+
+    echo "Sélectionnez un profil git:"
+    mapfile -t profiles < <(
+        grep -E '^\[user\]$' -A 2 "$HOME/.git_identities" \
+        | grep -E 'name = |email = ' \
+        | sed 's/^[[:space:]]*//' \
+        | paste - - \
+        | sed 's/ name = /, /' \
+        | sed 's/ email = /, /'
+    )
+    select profile in "${profiles[@]}"; do
+        if [ -n "$profile" ]; then
+            git_name=$(echo "$profile" | cut -d',' -f1 | sed 's/name = //')
+            git_email=$(echo "$profile" | cut -d',' -f2 | sed 's/email = //')
+            break
+        else
+            echo -e "\e[31mSélection invalide. Veuillez réessayer.\e[0m"
+        fi
+    done
+
+    # Clonage du repo
+    echo "Clonage du repo: $repo_url"
+    if ! git clone "$repo_url"; then
+        echo -e "\e[31mErreur lors du clonage du repo.\e[0m"
+        return 1
+    fi
+
+    # cd into the cloned repo directory
+    repo_dir=$(basename "$repo_url" .git)
+    cd "$repo_dir" || { echo -e "\e[31mErreur: Impossible d'entrer dans le répertoire du repo cloné.\e[0m"; return 1; }
+
+    echo "Utilisation du profil: $git_name <$git_email>"
+    git config user.name "$git_name"
+    git config user.email "$git_email"
+
+    echo -e "\e[32m=== Repo cloné avec succès ! ===\e[0m"
 }
