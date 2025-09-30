@@ -1,0 +1,3 @@
+# NPM Aliases
+alias nrs='npm run serve'
+alias nrd='npm run dev'

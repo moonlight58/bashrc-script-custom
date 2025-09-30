@@ -1,0 +1,148 @@
+# Fonction update/install discord - vencord
+vencord-discord() {
+    # vérif argument
+    if [ $# -ne 1 ]; then
+        echo -e "\e[33mUsage:\e[0m \e[34mvencord-discord install\e[0m/\e[34mupdate\e[0m"
+        return 1
+    fi
+
+    local type_install="$1"
+
+    echo "=== $type_install the discord client ==="
+
+    echo "=== Downloading the latest stable version of Discord ==="
+    curl -o discord.tar.gz -J --location-trusted --max-redirs 10 "https://discord.com/api/download/stable?platform=linux&format=tar.gz"
+
+    echo "=== Updating Discord to the latest stable version ==="
+    tar -xzf discord.tar.gz
+
+    echo "=== $type_install Discord files to /opt/discord/ ==="
+    sudo mkdir -p /opt/discord
+    sudo cp -r Discord/* /opt/discord/
+
+    echo "=== Modifying the desktop file for custom folder ==="
+    sudo sed -i 's|Exec=/usr/share/discord/Discord|Exec=/usr/bin/discord|' /opt/discord/discord.desktop
+    sudo sed -i 's|Icon=discord|Icon=/opt/discord/discord.png|' /opt/discord/discord.desktop
+
+    echo "=== Installing Discord ==="
+    if [ $1 == "install" ]; then
+        # set symlink
+        sudo ln -sf /opt/discord/Discord /usr/bin/discord
+
+        echo "$"
+    fi
+
+    echo "=== Add execute permission and set root user ==="
+    sudo chown root:root -R /opt/discord/
+    sudo chmod -R +x /opt/discord/
+
+    echo "=== Delete temp files ==="
+    rm -rf discord.tar.gz Discord
+
+    echo "Launching Vencord Installer/Updater..."
+    sh -c "$(curl -sS https://raw.githubusercontent.com/Vendicated/VencordInstaller/main/install.sh)"
+
+    echo -e "\e[32m=== Operation completed successfully! ===\e[0m"
+}
+
+# Fonction git-push
+git-push() {
+    # Vérification du premier argument (message de commit)
+    if [ $# -ne 1 ]; then
+        echo -e "\e[33mUsage: git-push \"message du commit\" branch\e[0m"
+        echo -e "\e[33m   or: git-push \"message du commit\"\e[0m"
+        return 1
+    fi
+
+    local commit_message="$1"
+    local branch="$2"
+
+    # Si la branche n'est pas fournie, utiliser la branche actuelle
+    if [ -z "$branch" ]; then
+        branch=$(git branch --show-current)
+        if [ -z "$branch" ]; then
+            echo -e "\e[31mErreur: Impossible de déterminer la branche actuelle. Veuillez spécifier une branche.\e[0m"
+            return 1
+        fi
+        echo -e "\e[33m Récupération de la branche actuelle: $branch\e[0m"
+    fi
+
+    # Vérification s'il y a déjà un commit
+    if ! git rev-parse HEAD >/dev/null 2>&1; then
+        echo -e "\e[31mAucun commit n'a encore été créé. Création du premier commit...\e[0m"
+        git add .
+        if ! git commit -m "$commit_message"; then
+            echo -e "\e[31mErreur lors de la création du premier commit.\e[0m"
+            return 1
+        fi
+        echo "Push vers la branche: $branch"
+        if ! git push origin "$branch"; then
+            echo -e "\e[31mErreur lors du push.\e[0m"
+            return 1
+        fi
+        echo -e "\e[32m=== Premier commit et push effectués avec succès ! ===\e[0m"
+        return 0
+    fi
+
+    echo -e "\e[32m=== Synchronisation avec le repo distant ===\e[0m"
+
+    # Fetch des dernières modifications
+    echo "Récupération des dernières modifications du repo distant..."
+    if ! git fetch origin; then
+        echo -e "\e[31mErreur lors du fetch. Arrêt de l'opération.\e[0m"
+        return 1
+    fi
+
+    # Vérification si on est sur la bonne branche
+    current_branch=$(git branch --show-current)
+    if [ "$current_branch" != "$branch" ]; then
+        echo "Passage à la branche: $branch"
+        if ! git checkout "$branch"; then
+            echo -e "\e[31mErreur lors du changement de branche. Arrêt de l'opération.\e[0m"
+            return 1
+        fi
+    fi
+
+    # Vérification s'il y a des modifications distantes
+    local_commit=$(git rev-parse HEAD)
+    remote_commit=$(git rev-parse "origin/$branch" 2>/dev/null)
+
+    if [ "$local_commit" != "$remote_commit" ]; then
+        echo "Des modifications distantes ont été détectées. Mise à jour locale..."
+        if ! git pull origin "$branch"; then
+            echo -e "\e[31mErreur lors du pull. Veuillez résoudre les conflits manuellement.\e[0m"
+            return 1
+        fi
+        echo "Synchronisation terminée avec succès."
+    else
+        echo "Le repo local est déjà à jour."
+    fi
+
+    echo -e "\e[32m=== Création et envoi du commit ===\e[0m"
+
+    # Vérification s'il y a des modifications à committer
+    if git diff --quiet && git diff --cached --quiet; then
+        echo -e "\e[35mAucune modification à committer.\e[0m"
+        return 0
+    fi
+
+    # Ajout des fichiers modifiés
+    echo "Ajout des fichiers modifiés..."
+    git add .
+
+    # Création du commit
+    echo "Création du commit avec le message: '$commit_message'"
+    if ! git commit -m "$commit_message"; then
+        echo -e "\e[31mErreur lors de la création du commit.\e[0m"
+        return 1
+    fi
+
+    # Push vers la branche
+    echo "Push vers la branche: $branch"
+    if ! git push origin "$branch"; then
+        echo -e "\e[31mErreur lors du push.\e[0m"
+        return 1
+    fi
+
+    echo -e "\e[32m=== Opération terminée avec succès ! ===\e[0m"
+}

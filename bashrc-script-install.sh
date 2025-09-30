@@ -12,17 +12,21 @@ CYAN='\033[0;36m'
 GRAY='\033[1;30m'
 NC='\033[0m' # No Color
 
-# Configuration options with descriptions
-declare -a CONFIG_KEYS=("basic_aliases" "git_aliases" "system_aliases" "npm_aliases" "vencord_function" "git_push_function" "starship_init")
-declare -A CONFIG_OPTIONS=(
-    ["basic_aliases"]="Basic shortcuts (cls, c, quit, q, src)"
-    ["git_aliases"]="Git shortcuts (gst, gpl, gpu, gco, gcm, gaa)"
-    ["system_aliases"]="System management (pls, install, remove, update)"
-    ["npm_aliases"]="NPM shortcuts (nrs, nrd)"
-    ["vencord_function"]="Discord Vencord installer/updater function"
-    ["git_push_function"]="Advanced git-push function with sync"
-    ["starship_init"]="Starship prompt initialization"
-)
+# Dossier contenant les scripts de configuration
+CONFIG_DIR="./scripts"
+
+# Générer dynamiquement les clés et descriptions
+CONFIG_KEYS=()
+declare -A CONFIG_OPTIONS=()
+
+for file in "$CONFIG_DIR"/*; do
+    [ -e "$file" ] || continue
+    key=$(basename "$file")
+    CONFIG_KEYS+=("$key")
+    # Lire la première ligne pour la description
+    desc=$(head -n 1 "$file" | sed 's/^# *//')
+    CONFIG_OPTIONS["$key"]="$desc"
+done
 
 declare -A SELECTED_OPTIONS=()
 CURRENT_SELECTION=0
@@ -36,28 +40,28 @@ draw_interface() {
     echo -e "${NC}? ${GREEN}Please pick a preset:${NC} ${GRAY}Manually select features${NC}"
     echo -e "${NC}? ${GREEN}Check the features needed for your project:${NC}"
     echo
-    
+
     local i=0
     for key in "${CONFIG_KEYS[@]}"; do
         local prefix="  "
         local color="${NC}"
-        local checkbox="◯"
-        
+        local checkbox="⭘"
+
         # Highlight current selection
         if [ $i -eq $CURRENT_SELECTION ]; then
             prefix="> "
             color="${CYAN}"
         fi
-        
+
         # Show selected items
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            checkbox="◉"
+            checkbox="⏺"
         fi
-        
+
         echo -e "${color}${prefix}${checkbox} ${CONFIG_OPTIONS[$key]}${NC}"
         ((i++))
     done
-    
+
     echo
     echo -e "${GRAY}(Use arrow keys to move, <s> to select, <a> to toggle all, <i> to invert selection, <e> to confirm)${NC}"
 }
@@ -65,10 +69,10 @@ draw_interface() {
 # Function to handle user input
 handle_input() {
     local key
-    
+
     # Read a single character
     read -rsn1 key
-    
+
     # Handle escape sequences (arrow keys)
     if [[ $key == $'\e' ]]; then
         read -rsn2 -t 0.1 key
@@ -104,7 +108,7 @@ handle_input() {
                         break
                     fi
                 done
-                
+
                 if [ $all_selected -eq 1 ]; then
                     # Deselect all
                     for key in "${CONFIG_KEYS[@]}"; do
@@ -143,17 +147,17 @@ handle_input() {
 show_selection_interface() {
     # Configure terminal for raw input
     stty -echo -icanon min 1 time 0
-    
+
     while true; do
         draw_interface
         if ! handle_input; then
             break
         fi
     done
-    
+
     # Restore terminal settings
     stty echo icanon
-    
+
     # Check if any options were selected
     local has_selections=0
     for key in "${CONFIG_KEYS[@]}"; do
@@ -162,7 +166,7 @@ show_selection_interface() {
             break
         fi
     done
-    
+
     if [ $has_selections -eq 0 ]; then
         echo
         echo -e "${YELLOW}No configurations selected. Exiting.${NC}"
@@ -179,237 +183,17 @@ backup_bashrc() {
     fi
 }
 
-# Configuration generators
-generate_basic_aliases() {
-    cat << 'EOF'
-
-# Custom Basic Aliases
-alias cls='clear'
-alias c='clear'
-alias quit='exit'
-alias q='exit'
-alias src='source ~/.bashrc'
-
-EOF
-}
-
-generate_git_aliases() {
-    cat << 'EOF'
-
-# Custom Git Aliases
-alias gst='git status'
-alias gpl='git pull'
-alias gpu='git push'
-alias gco='git checkout'
-alias gcm='git commit -m'
-alias gaa='git add .'
-
-EOF
-}
-
-generate_system_aliases() {
-    cat << 'EOF'
-
-# System Management Aliases
-alias pls="sudo"
-alias install="sudo apt install"
-alias remove="sudo apt remove"
-alias update="sudo apt update -y && sudo apt upgrade -y && sudo autoremove -y"
-
-EOF
-}
-
-generate_npm_aliases() {
-    cat << 'EOF'
-
-# NPM Aliases
-alias nrs='npm run serve'
-alias nrd='npm run dev'
-
-EOF
-}
-
-generate_vencord_function() {
-    cat << 'EOF'
-
-# Fonction update/install discord - vencord
-vencord-discord() {
-    # vérif argument
-    if [ $# -ne 1 ]; then
-        echo "Usage: vencord-discord install/update"
-        return 1
-    fi
-
-    local type_install="$1"
-
-    echo "=== $type_install the discord client ==="
-
-    echo "=== Downloading the latest stable version of Discord ==="
-    curl -o discord.tar.gz -J --location-trusted --max-redirs 10 "https://discord.com/api/download/stable?platform=linux&format=tar.gz"
-
-    echo "=== Updating Discord to the latest stable version ==="
-    tar -xzf discord.tar.gz
-
-    echo "=== $type_install Discord files to /opt/discord/ ==="
-    sudo mkdir -p /opt/discord
-    sudo cp -r Discord/* /opt/discord/
-
-    echo "=== Modifying the desktop file for custom folder ==="
-    sudo sed -i 's|Exec=/usr/share/discord/Discord|Exec=/usr/bin/discord|' /opt/discord/discord.desktop
-    sudo sed -i 's|Icon=discord|Icon=/opt/discord/discord.png|' /opt/discord/discord.desktop
-
-    echo "=== Installing Discord ==="
-    if [ $1 == "install" ]; then
-        # set symlink
-        sudo ln -sf /opt/discord/Discord /usr/bin/discord
-
-        echo "$"
-    fi
-
-    echo "=== Add execute permission and set root user ==="
-    sudo chown root:root -R /opt/discord/
-    sudo chmod -R +x /opt/discord/
-
-    echo "=== Delete temp files ==="
-    rm -rf discord.tar.gz Discord
-
-    echo "Launching Vencord Installer/Updater..."
-    sh -c "$(curl -sS https://raw.githubusercontent.com/Vendicated/VencordInstaller/main/install.sh)"
-
-    echo -e "\e[32m=== Operation completed successfully! ===\e[0m"
-}
-
-EOF
-}
-
-generate_git_push_function() {
-    cat << 'EOF'
-
-# Fonction git-push
-git-push() {
-    # Vérification du premier argument (message de commit)
-    if [ $# -ne 1 ]; then
-        echo -e "\e[33mUsage: git-push \"message du commit\" branch\e[0m"
-        echo -e "\e[33m   or: git-push \"message du commit\"\e[0m"
-        return 1
-    fi
-
-    local commit_message="$1"
-    local branch="$2"
-
-    # Si la branche n'est pas fournie, utiliser la branche actuelle
-    if [ -z "$branch" ]; then
-        branch=$(git branch --show-current)
-        if [ -z "$branch" ]; then
-            echo -e "\e[31mErreur: Impossible de déterminer la branche actuelle. Veuillez spécifier une branche.\e[0m"
-            return 1
-        fi
-        echo -e "\e[33m Récupération de la branche actuelle: $branch\e[0m"
-    fi
-
-    # Vérification s'il y a déjà un commit
-    if ! git rev-parse HEAD >/dev/null 2>&1; then
-        echo -e "\e[31mAucun commit n'a encore été créé. Création du premier commit...\e[0m"
-        git add .
-        if ! git commit -m "$commit_message"; then
-            echo -e "\e[31mErreur lors de la création du premier commit.\e[0m"
-            return 1
-        fi
-        echo "Push vers la branche: $branch"
-        if ! git push origin "$branch"; then
-            echo -e "\e[31mErreur lors du push.\e[0m"
-            return 1
-        fi
-        echo -e "\e[32m=== Premier commit et push effectués avec succès ! ===\e[0m"
-        return 0
-    fi
-
-    echo -e "\e[32m=== Synchronisation avec le repo distant ===\e[0m"
-
-    # Fetch des dernières modifications
-    echo "Récupération des dernières modifications du repo distant..."
-    if ! git fetch origin; then
-        echo -e "\e[31mErreur lors du fetch. Arrêt de l'opération.\e[0m"
-        return 1
-    fi
-
-    # Vérification si on est sur la bonne branche
-    current_branch=$(git branch --show-current)
-    if [ "$current_branch" != "$branch" ]; then
-        echo "Passage à la branche: $branch"
-        if ! git checkout "$branch"; then
-            echo -e "\e[31mErreur lors du changement de branche. Arrêt de l'opération.\e[0m"
-            return 1
-        fi
-    fi
-
-    # Vérification s'il y a des modifications distantes
-    local_commit=$(git rev-parse HEAD)
-    remote_commit=$(git rev-parse "origin/$branch" 2>/dev/null)
-
-    if [ "$local_commit" != "$remote_commit" ]; then
-        echo "Des modifications distantes ont été détectées. Mise à jour locale..."
-        if ! git pull origin "$branch"; then
-            echo -e "\e[31mErreur lors du pull. Veuillez résoudre les conflits manuellement.\e[0m"
-            return 1
-        fi
-        echo "Synchronisation terminée avec succès."
-    else
-        echo "Le repo local est déjà à jour."
-    fi
-
-    echo -e "\e[32m=== Création et envoi du commit ===\e[0m"
-
-    # Vérification s'il y a des modifications à committer
-    if git diff --quiet && git diff --cached --quiet; then
-        echo -e "\e[35mAucune modification à committer.\e[0m"
-        return 0
-    fi
-
-    # Ajout des fichiers modifiés
-    echo "Ajout des fichiers modifiés..."
-    git add .
-
-    # Création du commit
-    echo "Création du commit avec le message: '$commit_message'"
-    if ! git commit -m "$commit_message"; then
-        echo -e "\e[31mErreur lors de la création du commit.\e[0m"
-        return 1
-    fi
-
-    # Push vers la branche
-    echo "Push vers la branche: $branch"
-    if ! git push origin "$branch"; then
-        echo -e "\e[31mErreur lors du push.\e[0m"
-        return 1
-    fi
-
-    echo -e "\e[32m=== Opération terminée avec succès ! ===\e[0m"
-}
-
-EOF
-}
-
-generate_starship_init() {
-    cat << 'EOF'
-
-# Starship prompt initialization
-eval "$(starship init bash)"
-
-EOF
-}
-
 # Main function
 main() {
     # Show the Vue CLI-style interface
     show_selection_interface
-    
+
     clear
     echo -e "${CYAN}Bashrc CLI v1.0.0${NC}"
     echo
     echo -e "${GREEN}✨ Creating bashrc configuration...${NC}"
     echo
-    
+
     # Show selected configurations
     echo -e "${GREEN}Selected configurations:${NC}"
     for key in "${CONFIG_KEYS[@]}"; do
@@ -418,10 +202,10 @@ main() {
         fi
     done
     echo
-    
+
     # Create backup
     backup_bashrc
-    
+
     # Add configurations
     echo -e "${BLUE}🔧 Adding configurations to ~/.bashrc...${NC}"
 
@@ -431,71 +215,21 @@ main() {
 
     for key in "${CONFIG_KEYS[@]}"; do
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            # Vérification si le bloc existe déjà 
-            case $key in
-                "basic_aliases")
-                    if ! grep -q "# Custom Basic Aliases" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_basic_aliases >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "git_aliases")
-                    if ! grep -q "# Custom Git Aliases" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_git_aliases >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "system_aliases")
-                    if ! grep -q "# System Management Aliases" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_system_aliases >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "npm_aliases")
-                    if ! grep -q "# NPM Aliases" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_npm_aliases >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "vencord_function")
-                    if ! grep -q "# Fonction update/install discord - vencord" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_vencord_function >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "git_push_function")
-                    if ! grep -q "# Fonction git-push" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_git_push_function >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-                "starship_init")
-                    if ! grep -q "# Starship prompt initialization" ~/.bashrc; then
-                        echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                        generate_starship_init >> ~/.bashrc
-                    else
-                        echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
-                    fi
-                    ;;
-            esac
+            file="$CONFIG_DIR/$key.bashrc"
+            desc="# ${CONFIG_OPTIONS[$key]}"
+            # Vérification si le bloc existe déjà (on cherche la description)
+            if ! grep -qF "$desc" ~/.bashrc; then
+                echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
+                cat "$file" >> ~/.bashrc
+            else
+                echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
+            fi
         fi
     done
 
     echo "# === End of Bashrc Configurator additions ===" >> ~/.bashrc
     echo "" >> ~/.bashrc
-    
+
     echo
     echo -e "${GREEN}🎉 Successfully created bashrc configuration!${NC}"
     echo
