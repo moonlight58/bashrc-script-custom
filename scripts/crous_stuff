@@ -1,0 +1,12 @@
+# Crous related stuff
+crous-menu() {
+    # Vérification des arguments (no argument or any number)
+    if [ $# -ne 0 ]; then
+        echo -e "\e[33mUsage: crous-menu\e[0m (no arguments needed for today's menu)"
+        echo -e "\e[33mUsage: crous-menu 1\e[0m (for tomorrow's menu, the bigger the number, the more days in the future)"
+        return 1
+    fi
+
+    # Run the crous menu script
+    node ~/Documents/github/Crous-Menu-Displayer/crous_menu.js "$1"
+}
