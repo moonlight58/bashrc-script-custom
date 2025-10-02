@@ -1,6 +1,6 @@
 # Crous related stuff
 crous-menu() {
-    # Vérification des arguments (no argument or any number)
+    # No arguments expected (or optional numeric days offset)
     if [ $# -ne 0 ]; then
         echo -e "\e[33mUsage: crous-menu\e[0m (no arguments needed for today's menu)"
         echo -e "\e[33mUsage: crous-menu 1\e[0m (for tomorrow's menu, the bigger the number, the more days in the future)"

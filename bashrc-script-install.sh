@@ -12,6 +12,9 @@ CYAN='\033[0;36m'
 GRAY='\033[1;30m'
 NC='\033[0m' # No Color
 
+# Variable pour stocker le fichier de configuration sélectionné
+USER_FILE_SELECTED=""
+
 # Dossier contenant les scripts de configuration
 CONFIG_DIR="./scripts"
 
@@ -31,6 +34,43 @@ done
 declare -A SELECTED_OPTIONS=()
 CURRENT_SELECTION=0
 
+# Function to select configuration file
+select_config_file() {
+    echo
+    echo -e "${CYAN}Configuration File Selection${NC}"
+    echo -e "${GRAY}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo
+    echo -e "${GREEN}Dans quel fichier souhaitez-vous ajouter les configurations ?${NC}"
+    echo
+    echo -e "  ${CYAN}1)${NC} ~/.bashrc   ${GRAY}(Bash - chargé pour les shells interactifs)${NC}"
+    echo -e "  ${CYAN}2)${NC} ~/.profile  ${GRAY}(Compatible Bash/Sh - chargé au login)${NC}"
+    echo -e "  ${CYAN}3)${NC} ~/.zshrc    ${GRAY}(Zsh - pour les utilisateurs de Zsh)${NC}"
+    echo
+    
+    while true; do
+        read -rp "Votre choix [1-3] : " choice
+        case $choice in
+            1)
+                USER_FILE_SELECTED="$HOME/.bashrc"
+                break
+                ;;
+            2)
+                USER_FILE_SELECTED="$HOME/.profile"
+                break
+                ;;
+            3)
+                USER_FILE_SELECTED="$HOME/.zshrc"
+                break
+                ;;
+            *)
+                echo -e "${RED}Choix invalide. Veuillez entrer 1, 2 ou 3.${NC}"
+                ;;
+        esac
+    done
+    
+    echo -e "${GREEN}✓${NC} Fichier sélectionné : ${CYAN}$USER_FILE_SELECTED${NC}"
+}
+
 # Function to draw the selection interface
 draw_interface() {
     clear
@@ -45,7 +85,7 @@ draw_interface() {
     for key in "${CONFIG_KEYS[@]}"; do
         local prefix="  "
         local color="${NC}"
-        local checkbox="⭘"
+        local checkbox="◯"
 
         # Highlight current selection
         if [ $i -eq $CURRENT_SELECTION ]; then
@@ -55,7 +95,7 @@ draw_interface() {
 
         # Show selected items
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
-            checkbox="⏺"
+            checkbox="◉"
         fi
 
         echo -e "${color}${prefix}${checkbox} ${CONFIG_OPTIONS[$key]}${NC}"
@@ -174,17 +214,25 @@ show_selection_interface() {
     fi
 }
 
-# Function to backup .bashrc
-backup_bashrc() {
-    if [ -f ~/.bashrc ]; then
-        local backup_name="$HOME/.bashrc.backup.$(date +%Y%m%d_%H%M%S)"
-        cp ~/.bashrc "$backup_name"
+# Function to backup configuration file
+backup_config_file() {
+    if [ -f "$USER_FILE_SELECTED" ]; then
+        local filename=$(basename "$USER_FILE_SELECTED")
+        local backup_name="$USER_FILE_SELECTED.backup.$(date +%Y%m%d_%H%M%S)"
+        cp "$USER_FILE_SELECTED" "$backup_name"
         echo -e "${GREEN}✓${NC} Backup created: $backup_name"
+    else
+        echo -e "${YELLOW}ℹ${NC} File $USER_FILE_SELECTED doesn't exist yet, creating it..."
+        touch "$USER_FILE_SELECTED"
     fi
 }
 
 # Main function
 main() {
+    echo
+    # === Sélection du fichier de configuration ===
+    select_config_file
+    
     echo
     # === Ajout du prompt pour les profils git ===
     read -rp "Voulez-vous ajouter un ou plusieurs profils git (user.name/user.email) ? (o/n) : " add_git_profiles
@@ -200,7 +248,7 @@ main() {
             read -rp "Ajouter un autre profil ? (o/n) : " another
             [[ "$another" =~ ^[oOyY]$ ]] || break
         done
-        echo -e "${GREEN}Profils git enregistrés dans $GIT_IDENTITIES_FILE et alias ajoutés à ~/.bashrc${NC}"
+        echo -e "${GREEN}Profils git enregistrés dans $GIT_IDENTITIES_FILE et alias ajoutés à $USER_FILE_SELECTED${NC}"
     fi
 
     echo
@@ -212,7 +260,7 @@ main() {
     clear
     echo -e "${CYAN}Bashrc CLI v1.0.0${NC}"
     echo
-    echo -e "${GREEN}✨ Creating bashrc configuration...${NC}"
+    echo -e "${GREEN}✨ Creating configuration...${NC}"
     echo
 
     # Show selected configurations
@@ -225,41 +273,50 @@ main() {
     echo
 
     # Create backup
-    backup_bashrc
+    backup_config_file
 
     # Add configurations
-    echo -e "${BLUE}🔧 Adding configurations to ~/.bashrc...${NC}"
+    echo -e "${BLUE}🔧 Adding configurations to $USER_FILE_SELECTED...${NC}"
 
     # Add header comment
-    echo "" >> ~/.bashrc
-    echo "# === Added by Bashrc Configurator $(date) ===" >> ~/.bashrc
+    echo "" >> "$USER_FILE_SELECTED"
+    echo "# === Added by Bashrc Configurator $(date) ===" >> "$USER_FILE_SELECTED"
 
     for key in "${CONFIG_KEYS[@]}"; do
         if [[ ${SELECTED_OPTIONS[$key]} == "1" ]]; then
             file="$CONFIG_DIR/$key"
             desc="# ${CONFIG_OPTIONS[$key]}"
             # Vérification si le bloc existe déjà (on cherche la description)
-            if ! grep -qF "$desc" ~/.bashrc; then
+            if ! grep -qF "$desc" "$USER_FILE_SELECTED"; then
                 echo -e "  ${GREEN}✓${NC} Adding ${CONFIG_OPTIONS[$key]}"
-                cat "$file" >> ~/.bashrc
+                cat "$file" >> "$USER_FILE_SELECTED"
                 echo "
-                " >> ~/.bashrc
+                " >> "$USER_FILE_SELECTED"
             else
                 echo -e "  ${YELLOW}⚠ ${NC} ${CONFIG_OPTIONS[$key]} already present, skipping."
             fi
         fi
     done
 
-    echo "# === End of Bashrc Configurator additions ===" >> ~/.bashrc
-    echo "" >> ~/.bashrc
+    echo "# === End of Bashrc Configurator additions ===" >> "$USER_FILE_SELECTED"
+    echo "" >> "$USER_FILE_SELECTED"
 
     echo
-    echo -e "${GREEN}🎉 Successfully created bashrc configuration!${NC}"
+    echo -e "${GREEN}🎉 Successfully created configuration!${NC}"
     echo
     echo -e "${YELLOW}Get started with the following commands:${NC}"
     echo
-    echo -e " ${GRAY}\$${NC} ${CYAN}source ~/.bashrc${NC}"
-    echo -e " ${GRAY}\$${NC} ${CYAN}# Or restart your terminal${NC}"
+    
+    # Afficher la commande appropriée selon le fichier sélectionné
+    local filename=$(basename "$USER_FILE_SELECTED")
+    echo -e " ${GRAY}\$${NC} ${CYAN}source $USER_FILE_SELECTED${NC}"
+    
+    if [[ "$filename" == ".zshrc" ]]; then
+        echo -e " ${GRAY}\$${NC} ${CYAN}# Or restart your terminal / open a new zsh session${NC}"
+    else
+        echo -e " ${GRAY}\$${NC} ${CYAN}# Or restart your terminal${NC}"
+    fi
+    
     echo
     echo -e "${GRAY}You can always restore from backup if needed.${NC}"
 }
