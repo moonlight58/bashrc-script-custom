@@ -30,7 +30,8 @@ jobs:
       - name: Build .deb
         run: |
           mkdir -p build
-          cp -r * build/
+          # Copie tout sauf le dossier build lui-même
+          rsync -av --exclude='build' ./ build/
           cd build
           dpkg-deb --build . ../bashrc-script-custom_${VERSION}_all.deb
       - name: Check if .deb changed
