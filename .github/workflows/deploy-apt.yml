@@ -33,7 +33,7 @@ jobs:
           # Copie tout sauf le dossier build lui-même
           rsync -av --exclude='build' ./ build/
           cd build
-          dpkg-deb --build . ../bashrc-script-custom_${VERSION}_all.deb
+          dpkg-deb --build debian/bashrc-script-custom bashrc-script-custom_${VERSION}_all.deb
       - name: Check if .deb changed
         id: check
         run: |
