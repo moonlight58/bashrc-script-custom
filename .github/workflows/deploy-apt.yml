@@ -1,23 +1,18 @@
 name: Deploy APT Repo
-
 on:
   push:
     branches:
       - prod
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y reprepro dpkg-dev debhelper gnupg curl
-
       - name: Import GPG key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
@@ -26,27 +21,23 @@ jobs:
           echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
           echo "use-agent" >> ~/.gnupg/gpg.conf
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-
       - name: Compute version
         id: version
         run: |
           VERSION="1.0-$(date +%Y%m%d%H%M)-${GITHUB_SHA::7}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION"
-
       - name: Build .deb
         run: |
           mkdir -p build
           cp -r * build/
           cd build
           dpkg-deb --build . ../bashrc-script-custom_${VERSION}_all.deb
-
       - name: Check if .deb changed
         id: check
         run: |
           NEW_HASH=$(sha256sum bashrc-script-custom_${VERSION}_all.deb | awk '{print $1}')
           echo "NEW_HASH=$NEW_HASH" >> $GITHUB_ENV
-          # compare with previous commit's hash if available
           if [ -f last_deb_hash.txt ]; then
             OLD_HASH=$(cat last_deb_hash.txt)
             if [ "$NEW_HASH" = "$OLD_HASH" ]; then
@@ -57,33 +48,27 @@ jobs:
           else
             echo "no_change=false" >> $GITHUB_ENV
           fi
-
       - name: Deploy APT repo
         if: env.no_change == 'false'
         run: |
-          # setup repo
           mkdir -p apt-repo/{conf,dists,db,pool}
-          echo "Origin: Moon
-Label: MoonRepo
-Codename: stable
-Architectures: amd64 source all
-Components: main
-Description: Moon's custom Debian repo
-SignWith: yes" > apt-repo/conf/distributions
-
-          # include new .deb
+          cat <<EOF > apt-repo/conf/distributions
+          Origin: Moon
+          Label: MoonRepo
+          Codename: stable
+          Architectures: amd64 source all
+          Components: main
+          Description: Moon's custom Debian repo
+          SignWith: yes
+          EOF
           reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
-
-          # export public key
           gpg --armor --export your@email.com > apt-repo/public.key
-
       - name: Deploy to GitHub Pages
         if: env.no_change == 'false'
         uses: peaceiris/actions-gh-pages@v6
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apt-repo
-
       - name: Save last .deb hash
         if: env.no_change == 'false'
         run: |
