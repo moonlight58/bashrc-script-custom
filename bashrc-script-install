@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Bashrc Configuration Script
 # Vue CLI-style interactive tool to add aliases, functions, and configurations to .bashrc

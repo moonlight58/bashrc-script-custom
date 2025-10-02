@@ -1,11 +1,12 @@
 # Bashrc Script Custom
 
-An interactive tool to quickly and cleanly customize your `~/.bashrc` file with aliases, functions, and modular configurations via a command-line interface inspired by Vue CLI.
+An interactive tool to quickly and cleanly customize your `~/.bashrc` or `.profile` or `.zsh` file with aliases, functions, and modular configurations via a command-line interface inspired by Vue CLI.
 
 ---
 
 ## How to install
-### Import the secure public key
+```bash
+# Import the secure public key
 curl -fsSL https://moonlight58.github.io/moon-apt-repo/public.key | sudo gpg --dearmor -o /usr/share/keyrings/moon.gpg
 
 # Add the repo
@@ -14,8 +15,7 @@ echo "deb [signed-by=/usr/share/keyrings/moon.gpg] https://moonlight58.github.io
 # Update and install
 sudo apt update
 sudo apt install bashrc-script-custom
-
-
+```
 ## Features
 
 - **Dynamically add aliases, functions, and configurations** from module files in the `scripts/` folder
