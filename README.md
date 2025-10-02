@@ -16,6 +16,13 @@ echo "deb [signed-by=/usr/share/keyrings/moon.gpg] https://moonlight58.github.io
 sudo apt update
 sudo apt install bashrc-script-custom
 ```
+
+## How to use
+```bash
+bashrc-script-install
+```
+And boom, it's done :D
+
 ## Features
 
 - **Dynamically add aliases, functions, and configurations** from module files in the `scripts/` folder
