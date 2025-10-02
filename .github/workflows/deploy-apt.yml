@@ -46,7 +46,6 @@ jobs:
         run: |
           NEW_HASH=$(sha256sum bashrc-script-custom_${VERSION}_all.deb | awk '{print $1}')
           echo "NEW_HASH=$NEW_HASH" >> $GITHUB_ENV
-          # compare with previous commit's hash if available
           if [ -f last_deb_hash.txt ]; then
             OLD_HASH=$(cat last_deb_hash.txt)
             if [ "$NEW_HASH" = "$OLD_HASH" ]; then
@@ -61,20 +60,16 @@ jobs:
       - name: Deploy APT repo
         if: env.no_change == 'false'
         run: |
-          # setup repo
           mkdir -p apt-repo/{conf,dists,db,pool}
           echo "Origin: Moon
-Label: MoonRepo
-Codename: stable
-Architectures: amd64 source all
-Components: main
-Description: Moon's custom Debian repo
-SignWith: yes" > apt-repo/conf/distributions
+        Label: MoonRepo
+        Codename: stable
+        Architectures: amd64 source all
+        Components: main
+        Description: Moon's custom Debian repo
+        SignWith: yes" > apt-repo/conf/distributions
 
-          # include new .deb
           reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
-
-          # export public key
           gpg --armor --export your@email.com > apt-repo/public.key
 
       - name: Deploy to GitHub Pages
