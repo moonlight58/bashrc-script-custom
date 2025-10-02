@@ -21,7 +21,7 @@ sudo apt install bashrc-script-custom
 ```bash
 bashrc-script-install
 ```
-And boom, it's done :D
+And boom, it's done :O
 
 ## Features
 
