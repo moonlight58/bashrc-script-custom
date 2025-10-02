@@ -312,7 +312,7 @@ git-create-repo() {
 
         # Check for existing remote
         if git remote get-url origin &>/dev/null; then
-            echo -e "\e[33mWarning: An 'origin' remote already exists:\e[0m"
+            echo -e "\e[33m⚠ Warning: An 'origin' remote already exists:\e[0m"
             git remote get-url origin
             echo "Do you want to replace it? (y/n)"
             read -r replace
@@ -399,7 +399,7 @@ git-delete-repo() {
         return 1
     fi
 
-    echo -e "\e[33m=== Warning: This operation is irreversible! ===\e[0m"
+    echo -e "\e[33m⚠ Warning: This operation is irreversible!\e[0m"
     echo -e "\e[33mYou are about to delete the repo '$repo_name' with mode '$delete_type'.\e[0m"
     echo -e "\e[33mDo you confirm this action? (y/n)\e[0m"
     read -r confirmation
