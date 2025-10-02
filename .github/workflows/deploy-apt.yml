@@ -62,12 +62,12 @@ jobs:
         run: |
           mkdir -p apt-repo/{conf,dists,db,pool}
           echo "Origin: Moon
-        Label: MoonRepo
-        Codename: stable
-        Architectures: amd64 source all
-        Components: main
-        Description: Moon's custom Debian repo
-        SignWith: yes" > apt-repo/conf/distributions
+Label: MoonRepo
+Codename: stable
+Architectures: amd64 source all
+Components: main
+Description: Moon's custom Debian repo
+SignWith: yes" > apt-repo/conf/distributions
 
           reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
           gpg --armor --export your@email.com > apt-repo/public.key
