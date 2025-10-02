@@ -4,6 +4,18 @@ An interactive tool to quickly and cleanly customize your `~/.bashrc` file with 
 
 ---
 
+## How to install
+### Import the secure public key
+curl -fsSL https://moonlight58.github.io/moon-apt-repo/public.key | sudo gpg --dearmor -o /usr/share/keyrings/moon.gpg
+
+# Add the repo
+echo "deb [signed-by=/usr/share/keyrings/moon.gpg] https://moonlight58.github.io/moon-apt-repo stable main" | sudo tee /etc/apt/sources.list.d/moon.list
+
+# Update and install
+sudo apt update
+sudo apt install bashrc-script-custom
+
+
 ## Features
 
 - **Dynamically add aliases, functions, and configurations** from module files in the `scripts/` folder

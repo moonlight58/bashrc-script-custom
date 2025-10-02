@@ -1,0 +1,9 @@
+./scripts/aliases_basic
+./scripts/aliases_git
+./scripts/aliases_npm
+./scripts/aliases_system
+./scripts/cargo_path
+./scripts/crous_stuff
+./scripts/functions
+./scripts/starship_init
+./bashrc-script-install.sh

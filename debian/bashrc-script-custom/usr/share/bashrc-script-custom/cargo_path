@@ -1,0 +1,2 @@
+# Rust/Cargo environment setup to PATH
+export PATH="$HOME/.cargo/bin:$PATH"

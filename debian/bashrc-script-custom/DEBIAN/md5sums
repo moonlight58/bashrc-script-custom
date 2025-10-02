@@ -1,0 +1,10 @@
+d7978076e621be98eb718f7c7561cbee  usr/bin/bashrc-script-install.sh
+f8e6f168dc1ac760172d2cf48a66cf03  usr/share/bashrc-script-custom/aliases_basic
+e07b26b4d365ad126486c0db165f3455  usr/share/bashrc-script-custom/aliases_git
+2b4565d2650d303dfcb14139695a9036  usr/share/bashrc-script-custom/aliases_npm
+cf9f3a9c56bd26f68be32ee66095d402  usr/share/bashrc-script-custom/aliases_system
+41ec33a8db80fda8d173403825fbf6a2  usr/share/bashrc-script-custom/cargo_path
+c4be93a4d0dfc3aae89827291002c991  usr/share/bashrc-script-custom/crous_stuff
+8f79d1e41189efb4523c482c9ccab229  usr/share/bashrc-script-custom/functions
+634287b23916aa91f9f37b020e17880d  usr/share/bashrc-script-custom/starship_init
+b4697ac288bfb9c14f1b65fd8b81fa07  usr/share/doc/bashrc-script-custom/changelog.Debian.gz

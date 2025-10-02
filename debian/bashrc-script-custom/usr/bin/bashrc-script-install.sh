@@ -222,16 +222,14 @@ backup_config_file() {
         cp "$USER_FILE_SELECTED" "$backup_name"
         echo -e "${GREEN}✓${NC} Backup created: $backup_name"
     else
-        echo -e "${YELLOW}⚠${NC} File $USER_FILE_SELECTED doesn't exist yet, creating it..."
+        echo -e "${YELLOW}ℹ${NC} File $USER_FILE_SELECTED doesn't exist yet, creating it..."
         touch "$USER_FILE_SELECTED"
     fi
 }
 
 # Main function
 main() {
-    # clear the screen
-    clear
-    echo -e "${CYAN}Bashrc CLI v1.0.1${NC}"
+    echo
     # === Sélection du fichier de configuration ===
     select_config_file
     
