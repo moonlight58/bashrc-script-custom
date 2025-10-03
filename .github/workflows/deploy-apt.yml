@@ -27,9 +27,16 @@ jobs:
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "use-agent" >> ~/.gnupg/gpg.conf
           export GPG_TTY=$(tty)
-          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --passphrase "$APT_GPG_PASSPHRASE" --pinentry-mode loopback --import
+
+          # Import clé privée
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --yes --passphrase "$APT_GPG_PASSPHRASE" --pinentry-mode loopback --import
+
+          # Vérification : affiche la clé importée
+          gpg --list-secret-keys
 
       # 4️⃣ Calculer la version
       - name: Compute version
@@ -64,20 +71,32 @@ jobs:
       # 7️⃣ Déployer le dépôt APT
       - name: Deploy APT repo
         if: env.no_change == 'false'
+        env:
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           mkdir -p apt-repo/{conf,dists,db,pool}
+
+          # Fichier distributions SANS "SignWith"
           cat <<EOF > apt-repo/conf/distributions
           Origin: Moon
           Label: MoonRepo
           Codename: stable
-          Architectures: amd64 source
+          Architectures: amd64 source all
           Components: main
           Description: Moon's custom Debian repo
-          SignWith: 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91
           EOF
-          reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
-          gpg --armor --export gael.rothlin@proton.me > apt-repo/public.key
+
+          export GPG_TTY=$(tty)
+
+          # On passe la passphrase à gpg-agent et reprepro signe automatiquement
+          echo "$APT_GPG_PASSPHRASE" | reprepro -b apt-repo -V --ask-passphrase includedeb stable bashrc-script-custom_${VERSION}_all.deb
+
+          # Export de la clé publique
+          gpg --armor --export > apt-repo/public.key
+
+          # Forcer l’export
           reprepro -b apt-repo export
+
 
       # 8️⃣ Déployer sur GitHub Pages
       - name: Deploy to GitHub Pages
