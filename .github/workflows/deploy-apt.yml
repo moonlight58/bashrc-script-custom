@@ -50,18 +50,33 @@ jobs:
       - name: Deploy APT repo
         if: env.no_change == 'false'
         run: |
+          # Création des dossiers du repo
           mkdir -p apt-repo/{conf,dists,db,pool}
+
+          # Configuration GPG pour loopback
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          export GPG_TTY=$(tty)
+
+          # Création du fichier distributions
           cat <<EOF > apt-repo/conf/distributions
           Origin: Moon
           Label: MoonRepo
           Codename: stable
-          Architectures: amd64 source
+          Architectures: amd64 source all
           Components: main
           Description: Moon's custom Debian repo
-          SignWith: yes
+          SignWith: 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91
           EOF
+
+          # Inclusion du .deb
           reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
-          gpg --armor --export your@email.com > apt-repo/public.key
+
+          # Export de la clé publique pour les utilisateurs
+          gpg --armor --export gael.rothlin@proton.me > apt-repo/public.key
+          
+          # Forcer l’export pour mettre à jour les indices
+          reprepro -b apt-repo export
       - name: Deploy to GitHub Pages
         if: env.no_change == 'false'
         uses: peaceiris/actions-gh-pages@v3
