@@ -1,3 +1,1 @@
-#!/usr/bin/make -f
-%:
-	dh $@
+install -m 755 bashrc-script-install /usr/bin/bashrc-script-install
