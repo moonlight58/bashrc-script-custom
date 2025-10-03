@@ -63,7 +63,7 @@ jobs:
           Origin: Moon
           Label: MoonRepo
           Codename: stable
-          Architectures: amd64 source all
+          Architectures: amd64 source
           Components: main
           Description: Moon's custom Debian repo
           SignWith: 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91
@@ -74,7 +74,7 @@ jobs:
 
           # Export de la clé publique pour les utilisateurs
           gpg --armor --export gael.rothlin@proton.me > apt-repo/public.key
-          
+
           # Forcer l’export pour mettre à jour les indices
           reprepro -b apt-repo export
       - name: Deploy to GitHub Pages
