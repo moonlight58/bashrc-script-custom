@@ -78,11 +78,11 @@ jobs:
       - name: Push to moon-apt-repo
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.PAT_TOKEN }}
           publish_dir: ./apt-repo
           publish_branch: gh-pages
           external_repository: moonlight58/moon-apt-repo
-          force_orphan: true  
+          force_orphan: true
 
       - name: Save last .deb hash
         if: env.no_change == 'false'
