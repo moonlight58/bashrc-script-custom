@@ -70,7 +70,7 @@ jobs:
           Origin: Moon
           Label: MoonRepo
           Codename: stable
-          Architectures: amd64 source all
+          Architectures: amd64 source
           Components: main
           Description: Moon's custom Debian repo
           SignWith: 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91
