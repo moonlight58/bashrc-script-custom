@@ -5,22 +5,22 @@ on:
     branches:
       - prod
 
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️⃣ Installer les dépendances nécessaires
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y reprepro dpkg-dev debhelper gnupg curl rsync
 
-      # 3️⃣ Importer la clé GPG avec passphrase
       - name: Import GPG key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
@@ -30,28 +30,19 @@ jobs:
           chmod 700 ~/.gnupg
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
           echo "use-agent" >> ~/.gnupg/gpg.conf
-          export GPG_TTY=$(tty)
-
-          # Import clé privée
           echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --yes --passphrase "$APT_GPG_PASSPHRASE" --pinentry-mode loopback --import
-
-          # Vérification : affiche la clé importée
           gpg --list-secret-keys
 
-      # 4️⃣ Calculer la version
       - name: Compute version
         id: version
         run: |
           VERSION="1.0-$(date +%Y%m%d%H%M)-${GITHUB_SHA::7}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION"
 
-      # 5️⃣ Build le .deb depuis ton dossier Debian
       - name: Build .deb
         run: |
           dpkg-deb --build debian/bashrc-script-custom bashrc-script-custom_${VERSION}_all.deb
 
-      # 6️⃣ Vérifier si le .deb a changé
       - name: Check if .deb changed
         id: check
         run: |
@@ -68,15 +59,10 @@ jobs:
             echo "no_change=false" >> $GITHUB_ENV
           fi
 
-      # 7️⃣ Déployer le dépôt APT
       - name: Deploy APT repo
         if: env.no_change == 'false'
-        env:
-          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           mkdir -p apt-repo/{conf,dists,db,pool}
-
-          # Fichier distributions SANS "SignWith"
           cat <<EOF > apt-repo/conf/distributions
           Origin: Moon
           Label: MoonRepo
@@ -86,27 +72,18 @@ jobs:
           Description: Moon's custom Debian repo
           EOF
 
-          export GPG_TTY=$(tty)
+          reprepro -b apt-repo -V includedeb stable bashrc-script-custom_${VERSION}_all.deb
+          gpg --armor --export 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91 > apt-repo/public.key
 
-          # On passe la passphrase à gpg-agent et reprepro signe automatiquement
-          echo "$APT_GPG_PASSPHRASE" | reprepro -b apt-repo -V --ask-passphrase includedeb stable bashrc-script-custom_${VERSION}_all.deb
-
-          # Export de la clé publique
-          gpg --armor --export > apt-repo/public.key
-
-          # Forcer l’export
-          reprepro -b apt-repo export
-
-
-      # 8️⃣ Déployer sur GitHub Pages
-      - name: Deploy to GitHub Pages
-        if: env.no_change == 'false'
+      - name: Push to moon-apt-repo
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apt-repo
+          publish_branch: gh-pages
+          external_repository: moonlight58/moon-apt-repo
+          force_orphan: true  
 
-      # 9️⃣ Sauvegarder le hash du dernier .deb
       - name: Save last .deb hash
         if: env.no_change == 'false'
         run: |
