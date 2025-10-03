@@ -1,37 +1,50 @@
 name: Deploy APT Repo
+
 on:
   push:
     branches:
       - prod
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
+
+      # 2️⃣ Installer les dépendances nécessaires
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y reprepro dpkg-dev debhelper gnupg curl
+          sudo apt install -y reprepro dpkg-dev debhelper gnupg curl rsync
+
+      # 3️⃣ Importer la clé GPG avec passphrase
       - name: Import GPG key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
-          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
-          echo "use-agent" >> ~/.gnupg/gpg.conf
+          mkdir -p ~/.gnupg
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          export GPG_TTY=$(tty)
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --passphrase "$APT_GPG_PASSPHRASE" --pinentry-mode loopback --import
+
+      # 4️⃣ Calculer la version
       - name: Compute version
         id: version
         run: |
           VERSION="1.0-$(date +%Y%m%d%H%M)-${GITHUB_SHA::7}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "VERSION=$VERSION"
+
+      # 5️⃣ Build le .deb depuis ton dossier Debian
       - name: Build .deb
         run: |
-          VERSION="1.0-$(date +%Y%m%d%H%M)-${GITHUB_SHA::7}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
           dpkg-deb --build debian/bashrc-script-custom bashrc-script-custom_${VERSION}_all.deb
+
+      # 6️⃣ Vérifier si le .deb a changé
       - name: Check if .deb changed
         id: check
         run: |
@@ -47,42 +60,34 @@ jobs:
           else
             echo "no_change=false" >> $GITHUB_ENV
           fi
+
+      # 7️⃣ Déployer le dépôt APT
       - name: Deploy APT repo
         if: env.no_change == 'false'
         run: |
-          # Création des dossiers du repo
           mkdir -p apt-repo/{conf,dists,db,pool}
-
-          # Configuration GPG pour loopback
-          echo "use-agent" >> ~/.gnupg/gpg.conf
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          export GPG_TTY=$(tty)
-
-          # Création du fichier distributions
           cat <<EOF > apt-repo/conf/distributions
           Origin: Moon
           Label: MoonRepo
           Codename: stable
-          Architectures: amd64 source
+          Architectures: amd64 source all
           Components: main
           Description: Moon's custom Debian repo
           SignWith: 3EDB17B20A46A78C68EAD27DC1A50F4F29EFDE91
           EOF
-
-          # Inclusion du .deb
           reprepro -b apt-repo includedeb stable bashrc-script-custom_${VERSION}_all.deb
-
-          # Export de la clé publique pour les utilisateurs
           gpg --armor --export gael.rothlin@proton.me > apt-repo/public.key
-
-          # Forcer l’export pour mettre à jour les indices
           reprepro -b apt-repo export
+
+      # 8️⃣ Déployer sur GitHub Pages
       - name: Deploy to GitHub Pages
         if: env.no_change == 'false'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apt-repo
+
+      # 9️⃣ Sauvegarder le hash du dernier .deb
       - name: Save last .deb hash
         if: env.no_change == 'false'
         run: |
