@@ -15,8 +15,11 @@ NC='\033[0m' # No Color
 # Variable pour stocker le fichier de configuration sélectionné
 USER_FILE_SELECTED=""
 
-# Dossier contenant les scripts de configuration
-CONFIG_DIR="./scripts"
+# Obtenir le chemin absolu du répertoire où se trouve le script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Dossier contenant les scripts de configuration (relatif au script)
+CONFIG_DIR="$SCRIPT_DIR/scripts"
 
 # Générer dynamiquement les clés et descriptions
 CONFIG_KEYS=()
