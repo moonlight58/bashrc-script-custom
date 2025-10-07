@@ -15,11 +15,20 @@ NC='\033[0m' # No Color
 # Variable pour stocker le fichier de configuration sélectionné
 USER_FILE_SELECTED=""
 
-# Obtenir le chemin absolu du répertoire où se trouve le script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Dossier contenant les scripts de configuration
+# Priorité: local d'abord (dev), puis système (production)
+if [ -d "./scripts" ]; then
+    CONFIG_DIR="./scripts"
+    echo -e "${YELLOW}Mode développement: utilisation du dossier local ./scripts${NC}"
+elif [ -d "/usr/share/bashrc-script-custom" ]; then
+    CONFIG_DIR="/usr/share/bashrc-script-custom"
+else
+    echo -e "${RED}Error: Configuration directory not found!${NC}"
+    echo -e "${RED}Searched in: ./scripts and /usr/share/bashrc-script-custom${NC}"
+    exit 1
+fi
 
-# Dossier contenant les scripts de configuration (relatif au script)
-CONFIG_DIR="$SCRIPT_DIR/scripts"
+echo -e "${GRAY}Using config directory: $CONFIG_DIR${NC}"
 
 # Générer dynamiquement les clés et descriptions
 CONFIG_KEYS=()
