@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e
+
+# Script exécuté après l'installation du package
+
+case "$1" in
+    configure)
+        # Créer le lien symbolique pour simplifier la commande
+        ln -sf /usr/bin/bashrc-script-install.sh /usr/bin/bashrc-script-install
+        echo "Created symlink: bashrc-script-install -> bashrc-script-install.sh"
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
