@@ -167,7 +167,7 @@ git-clone() {
 
     local repo_url="$1"
 
-    # Input select for user name and email from the file .git_identities
+    # Vérifier si le fichier ~/.git_identities existe
     if [ ! -f "$HOME/.git_identities" ]; then
         echo -e "\e[31m✗ The file ~/.git_identities does not exist. Please create git profiles first.\e[0m"
         return 1
@@ -182,6 +182,8 @@ git-clone() {
         | sed 's/ name = /, /' \
         | sed 's/ email = /, /'
     )
+
+    # Afficher les profils disponibles
     select profile in "${profiles[@]}"; do
         if [ -n "$profile" ]; then
             git_name=$(echo "$profile" | cut -d',' -f1 | sed 's/name = //')
@@ -192,17 +194,18 @@ git-clone() {
         fi
     done
 
-    # Clone the repo
+    # Cloner le dépôt
     echo "Cloning repo: $repo_url"
     if ! git clone "$repo_url"; then
         echo -e "\e[31m✗ Error cloning the repo.\e[0m"
         return 1
     fi
 
-    # cd into the cloned repo directory
+    # Accéder au répertoire cloné
     repo_dir=$(basename "$repo_url" .git)
     cd "$repo_dir" || { echo -e "\e[31m✗ Error: Unable to enter the cloned repo directory.\e[0m"; return 1; }
 
+    # Configurer le profil Git
     echo "Using profile: $git_name <$git_email>"
     git config user.name "$git_name"
     git config user.email "$git_email"
