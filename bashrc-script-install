@@ -22,6 +22,7 @@ if [ -d "./scripts" ]; then
     echo -e "${YELLOW}Mode développement: utilisation du dossier local ./scripts${NC}"
 elif [ -d "/usr/share/bashrc-script-custom" ]; then
     CONFIG_DIR="/usr/share/bashrc-script-custom"
+    echo -e "${YELLOW}Mode production: utilisation du dossier /usr/share/bashrc-script-custom${NC}"
 else
     echo -e "${RED}Error: Configuration directory not found!${NC}"
     echo -e "${RED}Searched in: ./scripts and /usr/share/bashrc-script-custom${NC}"
@@ -36,7 +37,7 @@ declare -A CONFIG_OPTIONS=()
 
 if [ ! -d "$CONFIG_DIR" ] || [ -z "$(ls -A "$CONFIG_DIR")" ]; then
     echo -e "${RED}Erreur : Aucun script trouvé dans le dossier ${CONFIG_DIR}.${NC}"
-    
+
     exit 1
 fi
 
