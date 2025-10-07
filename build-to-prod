@@ -5,7 +5,7 @@ set -e
 rm -f ../bashrc-script-custom_*.deb ../bashrc-script-custom_*.buildinfo ../bashrc-script-custom_*.changes
 
 # Use .env variable
-VERSION="1.0.5"
+VERSION="1.1.3"
 
 # Clean previous packages
 /home/userdepinfo/Documents/github/moon-apt-repo/clean-pkg

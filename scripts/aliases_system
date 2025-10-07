@@ -4,4 +4,3 @@ alias install="sudo apt install -y"
 alias remove="sudo apt remove -y"
 alias update="sudo apt update -y && sudo apt upgrade -y && sudo apt autoremove -y"
 alias shutdown='shutdown now'
-alias find='find ~ -iname'
