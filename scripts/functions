@@ -286,7 +286,11 @@ git-create-repo() {
     if [[ "$response" =~ ^[Yy]$ ]]; then
         # CASE 1: Existing repo - find and link
         echo -e "\nSearching for repo '$repo_name' on the system..."
-        mapfile -t local_repos < <(find ~ -type d -iname "$repo_name" -exec test -d "{}/.git" \; -print 2>/dev/null)
+        
+        # FIX: Recherche corrigée avec filtre après
+        mapfile -t local_repos < <(\find ~ -type d -name "$repo_name" 2>/dev/null | while read -r dir; do
+            [[ -d "$dir/.git" ]] && echo "$dir"
+        done)
         
         local target_dir=""
         if [ ${#local_repos[@]} -gt 1 ]; then
@@ -315,7 +319,7 @@ git-create-repo() {
 
         # Check for existing remote
         if git remote get-url origin &>/dev/null; then
-            echo -e "\e[33m⚠ Warning: An 'origin' remote already exists:\e[0m"
+            echo -e "\e[33mWarning: An 'origin' remote already exists:\e[0m"
             git remote get-url origin
             echo "Do you want to replace it? (y/n)"
             read -r replace
