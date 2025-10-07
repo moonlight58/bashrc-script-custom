@@ -36,6 +36,7 @@ declare -A CONFIG_OPTIONS=()
 
 if [ ! -d "$CONFIG_DIR" ] || [ -z "$(ls -A "$CONFIG_DIR")" ]; then
     echo -e "${RED}Erreur : Aucun script trouvé dans le dossier ${CONFIG_DIR}.${NC}"
+    
     exit 1
 fi
 
