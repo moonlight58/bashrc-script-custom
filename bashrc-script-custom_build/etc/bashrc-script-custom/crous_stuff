@@ -1,0 +1,6 @@
+# Crous related stuff
+crous-menu() {
+
+    # Run the crous menu script
+    node ~/Documents/github/Crous-Menu-Displayer/crous_menu.js "$1"
+}

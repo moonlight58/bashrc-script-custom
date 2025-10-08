@@ -1,0 +1,7 @@
+# Custom Git Aliases
+alias gst='git status'
+alias gpl='git pull'
+alias gpu='git push'
+alias gco='git checkout'
+alias gcm='git commit -m'
+alias gaa='git add .'

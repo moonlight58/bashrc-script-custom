@@ -1,0 +1,6 @@
+# Custom Basic Aliases
+alias cls='clear'
+alias c='clear'
+alias quit='exit'
+alias q='exit'
+alias src='source ~/.bashrc'

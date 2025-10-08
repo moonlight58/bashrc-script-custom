@@ -1,30 +1,72 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Clean old builds
-rm -f ../bashrc-script-custom_*.deb ../bashrc-script-custom_*.buildinfo ../bashrc-script-custom_*.changes
+PKG_NAME="bashrc-script-custom"
+PKG_ARCH="all"
+BUILD_DIR="$(pwd)/${PKG_NAME}_build"
+OUTPUT_DIR="$(pwd)"
+REPO_DIR="$(pwd)/../moon-apt-repo/pool/main/b/${PKG_NAME}"
+REPO_GIT_DIR="$(pwd)/../moon-apt-repo"
+VERSION_FILE="VERSION"
 
-# Use .env variable
-VERSION="1.1.4"
+# --- Lecture et incrémentation automatique de version ---
+if [ -f "$VERSION_FILE" ]; then
+    PKG_VERSION=$(<"$VERSION_FILE")
+    # Incrémentation mineure
+    IFS='.' read -r MAJOR MINOR PATCH <<< "$PKG_VERSION"
+    PATCH=$((PATCH + 1))
+    PKG_VERSION="$MAJOR.$MINOR.$PATCH"
+else
+    PKG_VERSION="1.1.6"
+fi
+echo "$PKG_VERSION" > "$VERSION_FILE"
+echo "[INFO] Version du build : $PKG_VERSION"
 
-# Clean previous packages
-cd ../moon-apt-repo
-./clean-pkg
+# --- Vérifications ---
+command -v dpkg-deb >/dev/null 2>&1 || { echo "[❌] dpkg-deb n'est pas installé !"; exit 1; }
+command -v git >/dev/null 2>&1 || { echo "[❌] git n'est pas installé !"; exit 1; }
 
-# Build the package
-cd ../bashrc-script-custom
-dpkg-deb --build debian/bashrc-script-custom ../bashrc-script-custom_${VERSION}_all.deb
-sudo cp ../bashrc-script-custom_${VERSION}_all.deb ../moon-apt-repo/pool/main/b/bashrc-script-custom/
+# --- Build ---
+echo "[INFO] Nettoyage de l'ancien dossier de build..."
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR/DEBIAN" "$BUILD_DIR/usr/local/bin" "$BUILD_DIR/etc/${PKG_NAME}"
 
-echo "✓ Package créé : ../bashrc-script-custom_${VERSION}_all.deb"
+echo "[INFO] Copie des scripts..."
+cp -r scripts/* "$BUILD_DIR/etc/${PKG_NAME}/"
 
-# Update pkg metadata
-cd ../moon-apt-repo
-./update-pkg
-echo "✓ Metadata du dépôt mis à jour"
+echo "[INFO] Copie des fichiers DEBIAN..."
+cp DEBIAN/control "$BUILD_DIR/DEBIAN/"
+[ -f DEBIAN/postinst ] && cp DEBIAN/postinst "$BUILD_DIR/DEBIAN/"
+[ -f DEBIAN/prerm ] && cp DEBIAN/prerm "$BUILD_DIR/DEBIAN/"
 
-# Push the new package
-./push-pkg
-echo "✓ Package poussé dans le dépôt moon-apt-repo"
+grep -q "Version:" "$BUILD_DIR/DEBIAN/control" || echo "Version: ${PKG_VERSION}" >> "$BUILD_DIR/DEBIAN/control"
+grep -q "Architecture:" "$BUILD_DIR/DEBIAN/control" || echo "Architecture: ${PKG_ARCH}" >> "$BUILD_DIR/DEBIAN/control"
 
-cd ../bashrc-script-custom
+echo "[INFO] Construction du paquet .deb..."
+dpkg-deb -b "$BUILD_DIR" "${OUTPUT_DIR}/${PKG_NAME}_${PKG_VERSION}_${PKG_ARCH}.deb"
+echo "[✅] Paquet construit : ${OUTPUT_DIR}/${PKG_NAME}_${PKG_VERSION}_${PKG_ARCH}.deb"
+
+# --- Dépôt APT ---
+if [ -d "$REPO_DIR" ]; then
+    echo "[INFO] Déplacement du paquet dans le dépôt APT..."
+    mv -f "${OUTPUT_DIR}/${PKG_NAME}_${PKG_VERSION}_${PKG_ARCH}.deb" "$REPO_DIR/" || echo "[⚠️] Impossible de déplacer le paquet"
+
+    if [ -x "$REPO_GIT_DIR/update-pkg" ]; then
+        echo "[INFO] Mise à jour du dépôt APT..."
+        (cd "$REPO_GIT_DIR" && ./update-pkg) || echo "[⚠️] Échec de update-pkg"
+    else
+        echo "[⚠️] update-pkg introuvable ou non exécutable dans $REPO_GIT_DIR"
+    fi
+
+    # --- Git commit/push/tag ---
+    cd "$REPO_GIT_DIR"
+    git add . || echo "[⚠️] git add a échoué"
+    git commit -m "Build v${PKG_VERSION}" || echo "[⚠️] git commit a échoué (peut-être rien à committer)"
+    git push || echo "[⚠️] git push a échoué"
+
+    # Tag automatique
+    git tag -f "v${PKG_VERSION}" || echo "[⚠️] git tag a échoué"
+    git push origin "v${PKG_VERSION}" --force || echo "[⚠️] git push tag a échoué"
+fi
+
+echo "[🏁] Build terminé avec succès ! Version : $PKG_VERSION"
