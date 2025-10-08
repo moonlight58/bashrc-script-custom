@@ -17,19 +17,17 @@ USER_FILE_SELECTED=""
 
 # Dossier contenant les scripts de configuration
 # Priorité: local d'abord (dev), puis système (production)
-if [ -d "./scripts" ]; then
-    CONFIG_DIR="./scripts"
-    echo -e "${YELLOW}Mode développement: utilisation du dossier local ./scripts${NC}"
-elif [ -d "/usr/share/bashrc-script-custom" ]; then
+if [ -d "/usr/share/bashrc-script-custom" ]; then
     CONFIG_DIR="/usr/share/bashrc-script-custom"
     echo -e "${YELLOW}Mode production: utilisation du dossier /usr/share/bashrc-script-custom${NC}"
 else
     echo -e "${RED}Error: Configuration directory not found!${NC}"
-    echo -e "${RED}Searched in: ./scripts and /usr/share/bashrc-script-custom${NC}"
+    echo -e "${RED}Searched in: ./scripts(dev) and /usr/share/bashrc-script-custom(prod)${NC}"
     exit 1
 fi
 
 echo -e "${GRAY}Using config directory: $CONFIG_DIR${NC}"
+read -rt 2 -n 1 -p "Press any key to continue..."
 
 # Générer dynamiquement les clés et descriptions
 CONFIG_KEYS=()
